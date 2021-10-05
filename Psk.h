@@ -50,6 +50,7 @@ class PSK
 public:
 	PSK(std::string _filepath);
 	void Deserialize();
+	void close() { Ar.close(); };
 
 	std::vector<FVector> Verts;
 	std::vector<VVertex> Wedges;
