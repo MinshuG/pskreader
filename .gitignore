@@ -1,2 +1,5 @@
 .vs/
+.idea/
 out/
+build/
+*.pyd
