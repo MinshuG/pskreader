@@ -10,10 +10,24 @@ typedef unsigned char byte;
 typedef unsigned short word;
 
 
-class FVector
+struct FVector
 {
-public:
 	float X, Y, Z;
+};
+
+struct FVector2D
+{
+	float X, Y;
+};
+
+struct FQuat
+{
+	float X, Y, Z, W;
+};
+
+struct VertexColor
+{
+	byte R, G, B, A;
 };
 
 // Vertex with texturing info, akin to Hoppe's 'Wedge' concept - import only.
@@ -28,7 +42,7 @@ struct VVertex
 
 struct VTriangle32 // same as 16
 {
-	int WedgeIndex[3];
+	std::vector<int> WedgeIndex;
 	byte MatIndex;
 	byte AuxMatIndex;
 	unsigned SmoothingGroups;
@@ -45,6 +59,33 @@ struct VMaterial
 	int LodStyle;
 };
 
+struct VRawBoneInfluence
+{
+	float Weight;
+	int PntIdx;
+	int BoneIdx;
+};
+
+struct VJointPos
+{
+	FQuat Orientation;
+	FVector Position;
+
+	float Length;
+	float XSize;
+	float YSize;
+	float ZSize;
+};
+
+struct FNamedBoneBinary
+{
+	char Name[64];
+	int Flags;
+	int NumChildren;
+	int ParentIndex;
+	VJointPos BonePos;
+};
+
 class PSK
 {
 public:
@@ -56,7 +97,10 @@ public:
 	std::vector<VVertex> Wedges;
 	std::vector<VTriangle32> Tris;
 	std::vector<VMaterial> Materials;
-
+	std::vector<VertexColor> VertexColors;
+	std::vector<FVector2D> ExtraUVs;
+	std::vector<VRawBoneInfluence> Weights;
+	std::vector<FNamedBoneBinary> Bones;
 private:
 	std::ifstream Ar;
 };

@@ -3,6 +3,8 @@
 #include "Psk.h"
 #include <cassert>
 
+#define CHUNK(name) (strcmp(Chunk.ChunkID, name) == 0)
+
 PSK::PSK(std::string _filepath)
 {
 	Ar.open(_filepath, std::ios::binary);
@@ -22,7 +24,7 @@ void PSK::Deserialize()
 	Ar.seekg(0, 0);
 
 	VChunkHeader Chunk;
-	Ar.read(reinterpret_cast<char *>(&Chunk), sizeof(VChunkHeader));
+	Ar.read(reinterpret_cast<char*>(&Chunk), sizeof(VChunkHeader));
 	if (Chunk.ChunkID != MAGIC)
 	{
 		std::cout << "Not a psk file";
@@ -32,26 +34,21 @@ void PSK::Deserialize()
 	bool read = !size < (int)Ar.tellg() + 32;
 	while (true)
 	{
-		Ar.read(reinterpret_cast<char *>(&Chunk), sizeof(VChunkHeader));
-		#define CHUNK(name) (strcmp(Chunk.ChunkID, name) == 0)
+		Ar.read(reinterpret_cast<char*>(&Chunk), sizeof(VChunkHeader));
 		if (CHUNK("PNTS0000"))
 		{
-			FVector vec;
 			Verts.resize(Chunk.DataCount);
 			for (int i = 0; i < Chunk.DataCount; i++)
 			{
-				Ar.read(reinterpret_cast<char *>(&vec), sizeof(vec));
-				Verts[i] = vec;
+				Ar.read(reinterpret_cast<char*>(&Verts[i]), sizeof(FVector));
 			}
 		}
 		else if (CHUNK("VTXW0000"))
 		{
-			VVertex vert;
 			Wedges.resize(Chunk.DataCount);
 			for (int i = 0; i < Chunk.DataCount; i++)
 			{
-				Ar.read(reinterpret_cast<char *>(&vert), sizeof(vert));
-				Wedges[i] = vert;
+				Ar.read(reinterpret_cast<char*>(&Wedges[i]), sizeof(VVertex));
 				if (Chunk.DataCount <= 65536)
 					Wedges[i].PointIndex &= 0xFFFF;
 			}
@@ -61,13 +58,14 @@ void PSK::Deserialize()
 			Tris.resize(Chunk.DataCount);
 			for (int i = 0; i < Chunk.DataCount; i++) // my cpp skills at peak
 			{
-				Ar.read(reinterpret_cast<char *>(&Tris[i].WedgeIndex[0]), sizeof(short));
-				Ar.read(reinterpret_cast<char *>(&Tris[i].WedgeIndex[1]), sizeof(short));
+				Tris[i].WedgeIndex.resize(3);
+				Ar.read(reinterpret_cast<char*>(&Tris[i].WedgeIndex[0]), sizeof(short));
+				Ar.read(reinterpret_cast<char*>(&Tris[i].WedgeIndex[1]), sizeof(short));
 				Ar.read(reinterpret_cast<char *>(&Tris[i].WedgeIndex[2]), sizeof(short));
 
-				Ar.read(reinterpret_cast<char *>(&Tris[i].MatIndex), sizeof(Tris[i].MatIndex));
-				Ar.read(reinterpret_cast<char *>(&Tris[i].AuxMatIndex), sizeof(Tris[i].AuxMatIndex));
-				Ar.read(reinterpret_cast<char *>(&Tris[i].SmoothingGroups), sizeof(Tris[i].SmoothingGroups));
+				Ar.read(reinterpret_cast<char*>(&Tris[i].MatIndex), sizeof(Tris[i].MatIndex));
+				Ar.read(reinterpret_cast<char*>(&Tris[i].AuxMatIndex), sizeof(Tris[i].AuxMatIndex));
+				Ar.read(reinterpret_cast<char*>(&Tris[i].SmoothingGroups), sizeof(Tris[i].SmoothingGroups));
 			}
 		}
 		else if (CHUNK("FACE3200"))
@@ -75,25 +73,54 @@ void PSK::Deserialize()
 			Tris.resize(Chunk.DataCount);
 			for (int i = 0; i < Chunk.DataCount; i++)
 			{
-				Ar.read(reinterpret_cast<char *>(&Tris[i].WedgeIndex), sizeof(Tris[i].WedgeIndex));
-				Ar.read(reinterpret_cast<char *>(&Tris[i].MatIndex), sizeof(Tris[i].MatIndex));
-				Ar.read(reinterpret_cast<char *>(&Tris[i].AuxMatIndex), sizeof(Tris[i].AuxMatIndex));
-				Ar.read(reinterpret_cast<char *>(&Tris[i].SmoothingGroups), sizeof(Tris[i].SmoothingGroups));
+				Ar.read(reinterpret_cast<char*>(&Tris[i].WedgeIndex), sizeof(Tris[i].WedgeIndex)); // will this work?
+				Ar.read(reinterpret_cast<char*>(&Tris[i].MatIndex), sizeof(Tris[i].MatIndex));
+				Ar.read(reinterpret_cast<char*>(&Tris[i].AuxMatIndex), sizeof(Tris[i].AuxMatIndex));
+				Ar.read(reinterpret_cast<char*>(&Tris[i].SmoothingGroups), sizeof(Tris[i].SmoothingGroups));
 			}
 		}
 		else if (CHUNK("MATT0000"))
 		{
-			VMaterial mat;
 			Materials.resize(Chunk.DataCount);
 			for (int i = 0; i < Chunk.DataCount; i++)
 			{
-				Ar.read(reinterpret_cast<char *>(&mat), sizeof(mat));
-				Materials[i] = mat;
+				Ar.read(reinterpret_cast<char*>(&Materials[i]), sizeof(VMaterial));
 			};
 		}
-		else // skel probably later
+		else if (CHUNK("VERTEXCO"))
 		{
-			//assert(Chunk.DataCount > 0 && Chunk.DataSize > 0);
+			VertexColors.resize(Chunk.DataCount);
+			for (int i = 0; i < Chunk.DataCount; i++)
+			{
+				Ar.read(reinterpret_cast<char*>(&VertexColors[i]), sizeof(VertexColor));
+			}
+		}
+		else if (CHUNK("EXTRAUVS"))
+		{
+			ExtraUVs.resize(Chunk.DataCount);
+			for (int i = 0; i < Chunk.DataCount; i++)
+			{
+				Ar.read(reinterpret_cast<char*>(&ExtraUVs[i]), sizeof(FVector2D));
+			}
+		}
+		else if (CHUNK("RAWWEIGH") || CHUNK("RAWW0000"))
+		{
+			Weights.resize(Chunk.DataCount);
+			for (int i = 0; i < Chunk.DataCount; i++)
+			{
+				Ar.read(reinterpret_cast<char*>(&Weights[i]), sizeof(VRawBoneInfluence));
+			}
+		}
+		else if (CHUNK("REFSKELT") || CHUNK("REFSKEL0"))
+		{
+			Bones.resize(Chunk.DataCount);
+			for (int i = 0; i < Chunk.DataCount; i++)
+			{
+				Ar.read(reinterpret_cast<char*>(&Bones[i]), sizeof(FNamedBoneBinary));
+			}
+		}
+		else
+		{
 			Ar.seekg(Chunk.DataCount * Chunk.DataSize, 1);
 		}
 		if (size == (int)Ar.tellg())

@@ -8,7 +8,7 @@ using namespace std;
 
 int main()
 {
-	PSK psk = PSK("./ABombsite_0_BombWires.pskx");
+	PSK psk = PSK("./SK_M_XLG_Jim_01_Export_LOD0.psk");
 	psk.Deserialize();
 	psk.close();
 	return 0;
