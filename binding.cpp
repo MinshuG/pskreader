@@ -12,11 +12,22 @@ PYBIND11_MODULE(psk, m) {
         .def_readonly("Verts", &PSK::Verts)
         .def_readonly("Wedges", &PSK::Wedges)
         .def_readonly("Tris", &PSK::Tris)
+        .def_readonly("Normals", &PSK::Normals)
         .def_readonly("Materials", &PSK::Materials)
         .def_readonly("VertexColors", &PSK::VertexColors)
         .def_readonly("ExtraUVs", &PSK::ExtraUVs)
         .def_readonly("Weights", &PSK::Weights)
-        .def_readonly("Bones", &PSK::Bones);
+        .def_readonly("Bones", &PSK::Bones)
+        .def("GetScaledVerts", &PSK::GetScaledVerts, py::arg("scale"))
+        .def("GetPerVertexColor", [](const PSK &psk) {
+            std::vector<VertexColor> pervertex(psk.Verts.size());
+            for (int i = 0; i < psk.Wedges.size(); i++)
+            {
+                auto &w = psk.Wedges[i];
+                pervertex[w.PointIndex] = psk.VertexColors[i];
+            }
+            return pervertex;
+        });
 
     py::class_<FNamedBoneBinary>(m, "FNamedBoneBinary")
         .def_readonly("Name", &FNamedBoneBinary::Name)
@@ -70,7 +81,7 @@ PYBIND11_MODULE(psk, m) {
             return py::str("FQuat(X={}, Y={}, Z={}, W={})").format(v.X, v.Y, v.Z, v.W);
         })
         .def("__iter__", [](const FQuat &v) {
-            std::vector<float> values = {v.X, v.Y, v.Z, v.W};
+            float values[4] = {v.X, v.Y, v.Z, v.W};
             return py::make_iterator(values);
         });
 
@@ -103,4 +114,21 @@ PYBIND11_MODULE(psk, m) {
     .def_readonly("AuxFlags", &VMaterial::AuxFlags)
     .def_readonly("LodBias", &VMaterial::LodBias)
     .def_readonly("LodStyle", &VMaterial::LodStyle);
+
+    py::class_<VertexColor>(m, "VertexColor")
+        .def(py::init<>())
+        .def_readonly("R", &VertexColor::R)
+        .def_readonly("G", &VertexColor::G)
+        .def_readonly("B", &VertexColor::B)
+        .def_readonly("A", &VertexColor::A)
+        .def("to_tuple", [](const VertexColor &v) {
+            return py::make_tuple(v.R, v.G, v.B, v.A);
+        })
+        .def("__iter__", [](const VertexColor &v) {
+            std::vector<unsigned char> values = {v.R, v.G, v.B, v.A};
+            return py::make_iterator(values);
+        })
+        .def("__repr__", [](const VertexColor &v) {
+            return py::str("VertexColor(R={}, G={}, B={}, A={})").format(v.R, v.G, v.B, v.A);
+        });
 }

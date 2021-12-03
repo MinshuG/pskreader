@@ -13,6 +13,11 @@ typedef unsigned short word;
 struct FVector
 {
 	float X, Y, Z;
+
+	FVector operator*(float scalar) const
+	{
+		return FVector{ X * scalar, Y * scalar, Z * scalar };
+	}
 };
 
 struct FVector2D
@@ -28,6 +33,11 @@ struct FQuat
 struct VertexColor
 {
 	byte R, G, B, A;
+
+	VertexColor()
+	{
+		R = G = B = A = 1;
+	}
 };
 
 // Vertex with texturing info, akin to Hoppe's 'Wedge' concept - import only.
@@ -92,10 +102,12 @@ public:
 	PSK(std::string _filepath);
 	void Deserialize();
 	void close() { Ar.close(); };
+	std::vector<FVector> GetScaledVerts(float scale);
 
 	std::vector<FVector> Verts;
 	std::vector<VVertex> Wedges;
 	std::vector<VTriangle32> Tris;
+	std::vector<FVector> Normals;
 	std::vector<VMaterial> Materials;
 	std::vector<VertexColor> VertexColors;
 	std::vector<FVector2D> ExtraUVs;

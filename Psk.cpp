@@ -3,7 +3,7 @@
 #include "Psk.h"
 #include <cassert>
 
-#define CHUNK(name) (strcmp(Chunk.ChunkID, name) == 0)
+#define CHUNK(name) (strncmp(Chunk.ChunkID, name, strlen(name)) == 0)
 
 PSK::PSK(std::string _filepath)
 {
@@ -12,6 +12,17 @@ PSK::PSK(std::string _filepath)
 	{
 		return;
 	}
+}
+
+std::vector<FVector> PSK::GetScaledVerts(float scale)
+{
+	std::vector<FVector> scaledVerts;
+	scaledVerts.reserve(Verts.size());
+	for (auto &vert : Verts)
+	{
+		scaledVerts.push_back(vert * scale);
+	}
+	return scaledVerts;
 }
 
 void PSK::Deserialize()
@@ -87,7 +98,7 @@ void PSK::Deserialize()
 				Ar.read(reinterpret_cast<char*>(&Materials[i]), sizeof(VMaterial));
 			};
 		}
-		else if (CHUNK("VERTEXCO"))
+		else if (CHUNK("VERTEXCOLOR"))
 		{
 			VertexColors.resize(Chunk.DataCount);
 			for (int i = 0; i < Chunk.DataCount; i++)
@@ -103,7 +114,7 @@ void PSK::Deserialize()
 				Ar.read(reinterpret_cast<char*>(&ExtraUVs[i]), sizeof(FVector2D));
 			}
 		}
-		else if (CHUNK("RAWWEIGH") || CHUNK("RAWW0000"))
+		else if (CHUNK("RAWWEIGHTS") || CHUNK("RAWW0000"))
 		{
 			Weights.resize(Chunk.DataCount);
 			for (int i = 0; i < Chunk.DataCount; i++)
@@ -119,8 +130,17 @@ void PSK::Deserialize()
 				Ar.read(reinterpret_cast<char*>(&Bones[i]), sizeof(FNamedBoneBinary));
 			}
 		}
+		else if (CHUNK("VTXNORMS"))
+		{
+			Normals.resize(Chunk.DataCount);
+			for (int i = 0; i < Chunk.DataCount; i++)
+			{
+				Ar.read(reinterpret_cast<char*>(&Normals[i]), sizeof(FVector));
+			}
+		}
 		else
 		{
+			std::cout << "[PSK] Unknown chunk: " << Chunk.ChunkID << std::endl;
 			Ar.seekg(Chunk.DataCount * Chunk.DataSize, 1);
 		}
 		if (size == (int)Ar.tellg())
